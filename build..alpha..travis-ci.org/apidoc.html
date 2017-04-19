@@ -1,0 +1,161 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+        href="https://github.com/shama/workerify"
+
+    >workerify (v0.3.0)</a>
+</h1>
+<h4>Transform web workers into browserified inline Blobs with browserify.</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.workerify">module workerify</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.workerify.workerify">
+            function <span class="apidocSignatureSpan"></span>workerify
+            <span class="apidocSignatureSpan">(file)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.workerify" id="apidoc.module.workerify">module workerify</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.workerify.workerify" id="apidoc.element.workerify.workerify">
+        function <span class="apidocSignatureSpan"></span>workerify
+        <span class="apidocSignatureSpan">(file)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">workerify = function (file) {
+  if (!/\.(js|coffee)$/.test(file)) return through()
+  cwd = path.dirname(file)
+  var data = &#x27;&#x27;
+  return through(write, end)
+  function write(buf) { data += buf }
+  function end() {
+    var self = this, i = 0, allDone = false, output, vars = Object.create(null)
+
+    function done() {
+      i--
+      if (allDone &#x26;&#x26; i &#x3c; 1) {
+        self.queue(String(output))
+        self.queue(null)
+      }
+    }
+
+    // Collect vars
+    falafel(data, {isKeyword:isKeyword}, function(node) {
+      if (isVarLiteral(node)) {
+        vars[node.id.name] = node.init.value
+      }
+    })
+
+    // process source
+    output = falafel(data, {isKeyword:isKeyword}, function(node) {
+      var filename = false, withWorker = false
+      if (isWorkerifyKeyword(node)) {
+        filename = node.argument.value
+      } else if (isWorker(node)) {
+        withWorker = true
+        if (node.arguments[0].type === &#x27;Literal&#x27;) {
+          filename = node.arguments[0].value
+        }
+        if (node.arguments[0].type === &#x27;Identifier&#x27; &#x26;&#x26; vars[node.arguments[0].name]) {
+          filename = vars[node.arguments[0].name]
+        }
+      }
+      // browserify and update node
+      if (filename !== false) {
+        i++
+        var resolvedFile = resolveEntry(filename);
+
+        self.emit(&#x27;file&#x27;, resolvedFile)
+
+        bfy(resolvedFile, function(err, data) {
+          node.update(makeBlob(data, withWorker))
+          done()
+        })
+      }
+    })
+
+    if (i === 0) {
+      // no workers found skip
+      self.queue(data)
+      self.queue(null)
+    } else {
+      // otherwise ready to finish
+      allDone = true
+    }
+  }
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
